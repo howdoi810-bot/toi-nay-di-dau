@@ -16,6 +16,7 @@ import { CityPreset, HangoutCard, UnboxResult } from '../types/hangout';
 import { generateShareCardDataUrl } from '../utils/shareCardGenerator';
 import { CardArtwork } from './CardArtwork';
 import { soundEngine } from '../utils/sound';
+import { recordCardShare, recordMapsClick } from '../utils/analytics';
 
 interface HangoutCardModalProps {
   result: UnboxResult | null;
@@ -98,6 +99,7 @@ export const HangoutCardModal: React.FC<HangoutCardModalProps> = ({
     try {
       await navigator.clipboard.writeText(lines);
       setCopiedText(true);
+      recordCardShare('copy_zalo', activeCard.id);
       setTimeout(() => setCopiedText(false), 2400);
     } catch {
       // Ignore
@@ -114,6 +116,7 @@ export const HangoutCardModal: React.FC<HangoutCardModalProps> = ({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      recordCardShare('download_png', activeCard.id);
     } finally {
       setIsGeneratingImg(false);
     }
@@ -294,6 +297,7 @@ export const HangoutCardModal: React.FC<HangoutCardModalProps> = ({
                       href={getGoogleMapsUrl(activeCard.mapQuery)}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => recordMapsClick(activeCard.id, city)}
                       className="shrink-0 px-3.5 py-1.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-extrabold text-xs flex items-center gap-1 shadow-md transition"
                     >
                       <MapPin className="w-3.5 h-3.5" />

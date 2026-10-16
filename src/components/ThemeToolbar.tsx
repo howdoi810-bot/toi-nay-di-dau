@@ -10,6 +10,7 @@ import {
   Flame,
   Compass,
   Heart,
+  BarChart3,
 } from 'lucide-react';
 import { CITY_OPTIONS, THEMES } from '../data/themes';
 import { CityPreset, ThemeConfig, ThemeId } from '../types/hangout';
@@ -22,9 +23,11 @@ interface ThemeToolbarProps {
   soundEnabled: boolean;
   onToggleSound: () => void;
   totalBagsRipped: number;
+  globalBagsCount?: number;
   unlockedCount: number;
   totalCatalogCount: number;
   onOpenCustomModal: () => void;
+  onOpenStatsModal?: () => void;
   onScrollToCatalog: () => void;
 }
 
@@ -43,13 +46,15 @@ export const ThemeToolbar: React.FC<ThemeToolbarProps> = ({
   soundEnabled,
   onToggleSound,
   totalBagsRipped,
+  globalBagsCount = 0,
   unlockedCount,
   totalCatalogCount,
   onOpenCustomModal,
+  onOpenStatsModal,
   onScrollToCatalog,
 }) => {
-  // Base community counter + user's personal unboxings for social proof
-  const globalSimulatedCount = 148920 + totalBagsRipped;
+  // Base community counter + real live cloud bags ripped + personal unboxings
+  const globalSimulatedCount = 148920 + (globalBagsCount > 0 ? globalBagsCount : totalBagsRipped);
 
   return (
     <header className="w-full border-b border-white/10 backdrop-blur-md bg-black/25 sticky top-0 z-30">
@@ -144,6 +149,19 @@ export const ThemeToolbar: React.FC<ThemeToolbarProps> = ({
               <PlusCircle className="w-3.5 h-3.5 text-pink-400" />
               <span className="hidden md:inline">Tự tạo túi</span>
             </button>
+
+            {/* Live Stats Trigger Button */}
+            {onOpenStatsModal && (
+              <button
+                type="button"
+                onClick={onOpenStatsModal}
+                className="flex items-center gap-1 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-cyan-200 transition shadow"
+                title="Bảng thống kê traffic & lượt xé túi mù (?stats=1)"
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">Stats</span>
+              </button>
+            )}
 
             {/* Sound Toggle */}
             <button

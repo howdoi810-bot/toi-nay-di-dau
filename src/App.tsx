@@ -20,12 +20,30 @@ import { FilterBar } from './components/FilterBar';
 import { BlindBagStage } from './components/BlindBagStage';
 import { HangoutCardModal } from './components/HangoutCardModal';
 import { CollectionShelf } from './components/CollectionShelf';
+import { CreatorStatsModal } from './components/CreatorStatsModal';
+import { recordBagRip, recordPageVisit } from './utils/analytics';
 
 export function App() {
   const [userState, setUserState] = useState<PersistedUserState>(() => loadUserState());
   const [isRipping, setIsRipping] = useState(false);
   const [activeResult, setActiveResult] = useState<UnboxResult | null>(null);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const search = window.location.search.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      return search.includes('stats') || hash.includes('stats');
+    }
+    return false;
+  });
+  const [globalBagsCount, setGlobalBagsCount] = useState(0);
+
+  // Record page view and load live cloud bags count on mount
+  useEffect(() => {
+    recordPageVisit().then(({ bags }) => {
+      if (bags > 0) setGlobalBagsCount(bags);
+    });
+  }, []);
 
   useEffect(() => {
     soundEngine.enabled = userState.soundEnabled;
@@ -88,6 +106,11 @@ export function App() {
       if (result.bonusSecretCard) newlyUnlocked.add(result.bonusSecretCard.id);
 
       const bagsOpenedNow = userState.mode === 'combo' ? 3 : 1;
+
+      // Increment live cloud bags ripped counter
+      recordBagRip(bagsOpenedNow, result.primaryCard.rarity, result.wishMatched).then((latest) => {
+        if (latest > 0) setGlobalBagsCount(latest);
+      });
 
       setUserState((prev) => ({
         ...prev,
@@ -172,9 +195,11 @@ export function App() {
         soundEnabled={userState.soundEnabled}
         onToggleSound={() => setUserState((p) => ({ ...p, soundEnabled: !p.soundEnabled }))}
         totalBagsRipped={userState.totalBagsRipped}
+        globalBagsCount={globalBagsCount}
         unlockedCount={userState.unlockedCardIds.length}
         totalCatalogCount={allCards.length}
         onOpenCustomModal={() => setIsCustomModalOpen(true)}
+        onOpenStatsModal={() => setIsStatsModalOpen(true)}
         onScrollToCatalog={scrollToCatalog}
       />
 
@@ -228,22 +253,39 @@ export function App() {
         }}
       />
 
+      {/* Secret Creator Analytics Modal (?stats=1) */}
+      <CreatorStatsModal
+        isOpen={isStatsModalOpen}
+        onClose={() => setIsStatsModalOpen(false)}
+        personalBagsRipped={userState.totalBagsRipped}
+      />
+
       {/* Minimal Footer */}
       <footer className="border-t border-white/10 bg-black/30 py-4 px-4 text-center text-xs text-slate-400 z-10">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <span className="font-display text-white">TỐI NAY ĐI ĐÂU? · XÉ TÚI MÙ</span>
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm('Đặt lại bộ sưu tập túi mù từ đầu?')) {
-                window.localStorage.clear();
-                window.location.reload();
-              }
-            }}
-            className="text-pink-400 hover:underline font-medium"
-          >
-            Reset Kệ Sưu Tập
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsStatsModalOpen(true)}
+              className="text-cyan-400 hover:underline font-bold flex items-center gap-1"
+            >
+              <span>📊 Thống kê live (?stats=1)</span>
+            </button>
+            <span className="text-white/20">|</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('Đặt lại bộ sưu tập túi mù từ đầu?')) {
+                  window.localStorage.clear();
+                  window.location.reload();
+                }
+              }}
+              className="text-pink-400 hover:underline font-medium"
+            >
+              Reset Kệ Sưu Tập
+            </button>
+          </div>
         </div>
       </footer>
     </div>
