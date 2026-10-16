@@ -1,5 +1,8 @@
 # Tối Nay Đi Đâu? — Xé Túi Mù Chốt Kèo Đi Chơi 🎁🌙
 
+👉 **Chơi trực tiếp ngay tại (Live Website): [https://howdoi810-bot.github.io/toi-nay-di-dau/](https://howdoi810-bot.github.io/toi-nay-di-dau/)**
+📦 **GitHub Repository: [https://github.com/howdoi810-bot/toi-nay-di-dau](https://github.com/howdoi810-bot/toi-nay-di-dau)**
+
 Ứng dụng web giải quyết câu hỏi đau đầu mỗi tối của giới trẻ, dân văn phòng và các cặp đôi Việt Nam: **"Tối nay đi đâu? / Ăn xong đi đâu giờ?"** — kết hợp cùng trào lưu **Xé Túi Mù (Blind Bag / Pop Mart)** cực cuốn.
 
 ## ✨ Tính năng nổi bật
