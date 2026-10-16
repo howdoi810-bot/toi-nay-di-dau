@@ -56,26 +56,114 @@ export function detectTrafficSource(): TrafficSource {
   return 'direct';
 }
 
-async function hitKey(key: string): Promise<number> {
+const LOCAL_STATS_KEY = 'toinaydidau_local_metrics_v1';
+const HITS_BASE = 'https://hits.sh/howdoi810-bot.github.io/toi-nay-di-dau';
+
+function getLocalStats(): GlobalStatsSnapshot {
+  if (typeof window === 'undefined') {
+    return {
+      totalViews: 1,
+      bagsRipped: 0,
+      cardsShared: 0,
+      mapsClicked: 0,
+      sources: { threads: 0, tiktok: 0, fb: 0, zalo: 0, direct: 0 },
+    };
+  }
   try {
-    const res = await fetch(`${API_BASE}/hit/${NAMESPACE}/${key}`);
-    if (!res.ok) return 0;
-    const data = (await res.json()) as { value?: number };
-    return typeof data.value === 'number' ? data.value : 0;
+    const raw = window.localStorage.getItem(LOCAL_STATS_KEY);
+    if (raw) return JSON.parse(raw);
   } catch {
-    return 0;
+    // ignore
+  }
+  return {
+    totalViews: 1,
+    bagsRipped: 0,
+    cardsShared: 0,
+    mapsClicked: 0,
+    sources: { threads: 0, tiktok: 0, fb: 0, zalo: 0, direct: 0 },
+  };
+}
+
+function saveLocalStats(stats: GlobalStatsSnapshot): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LOCAL_STATS_KEY, JSON.stringify(stats));
+  } catch {
+    // ignore
   }
 }
 
-async function getKey(key: string): Promise<number> {
+// Zero-block image beacon (works through adblockers & no CORS required)
+function sendBeacon(key: string): void {
+  if (typeof window === 'undefined') return;
   try {
-    const res = await fetch(`${API_BASE}/get/${NAMESPACE}/${key}`);
-    if (!res.ok) return 0;
-    const data = (await res.json()) as { value?: number };
-    return typeof data.value === 'number' ? data.value : 0;
+    const img = new Image();
+    img.src = `${HITS_BASE}/${key}.svg?t=${Date.now()}`;
   } catch {
-    return 0;
+    // ignore
   }
+}
+
+async function hitKey(key: string): Promise<number> {
+  // Fire hits.sh cloud image beacon
+  sendBeacon(key);
+
+  // Update local persistent store
+  const local = getLocalStats();
+  if (key === 'total_views') local.totalViews += 1;
+  else if (key === 'bags_ripped') local.bagsRipped += 1;
+  else if (key === 'cards_shared') local.cardsShared += 1;
+  else if (key === 'maps_clicked') local.mapsClicked += 1;
+  else if (key === 'src_threads') local.sources.threads += 1;
+  else if (key === 'src_tiktok') local.sources.tiktok += 1;
+  else if (key === 'src_fb') local.sources.fb += 1;
+  else if (key === 'src_zalo') local.sources.zalo += 1;
+  else if (key === 'src_direct') local.sources.direct += 1;
+  saveLocalStats(local);
+
+  // Optional: try abacus edge counter with 1.8s timeout
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1800);
+    const res = await fetch(`${API_BASE}/hit/${NAMESPACE}/${key}`, { signal: controller.signal });
+    clearTimeout(timer);
+    if (res.ok) {
+      const data = (await res.json()) as { value?: number };
+      if (typeof data.value === 'number') return data.value;
+    }
+  } catch {
+    // Fall back to local
+  }
+
+  return key === 'total_views' ? local.totalViews : local.bagsRipped;
+}
+
+async function getKey(key: string): Promise<number> {
+  const local = getLocalStats();
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1800);
+    const res = await fetch(`${API_BASE}/get/${NAMESPACE}/${key}`, { signal: controller.signal });
+    clearTimeout(timer);
+    if (res.ok) {
+      const data = (await res.json()) as { value?: number };
+      if (typeof data.value === 'number') return data.value;
+    }
+  } catch {
+    // Fall back to local
+  }
+
+  if (key === 'total_views') return local.totalViews;
+  if (key === 'bags_ripped') return local.bagsRipped;
+  if (key === 'cards_shared') return local.cardsShared;
+  if (key === 'maps_clicked') return local.mapsClicked;
+  if (key === 'src_threads') return local.sources.threads;
+  if (key === 'src_tiktok') return local.sources.tiktok;
+  if (key === 'src_fb') return local.sources.fb;
+  if (key === 'src_zalo') return local.sources.zalo;
+  if (key === 'src_direct') return local.sources.direct;
+  return 0;
 }
 
 export function getSavedGa4Id(): string {
