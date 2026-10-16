@@ -237,7 +237,7 @@ export const BlindBagStage: React.FC<BlindBagStageProps> = ({
                     }}
                     className="pointer-events-none absolute inset-x-5 top-6 h-48 rounded-2xl border-2 border-amber-300 shadow-[0_0_40px_rgba(251,191,36,0.9)] overflow-hidden z-10 flex items-center justify-center"
                     style={{
-                      backgroundImage: 'url(/art/hangouts-sheet-1.png)',
+                      backgroundImage: `url(${import.meta.env.BASE_URL || './'}art/hangouts-sheet-1.png)`,
                       backgroundSize: '300% 300%',
                       backgroundPosition: '50% 50%',
                     }}
@@ -328,7 +328,7 @@ export const BlindBagStage: React.FC<BlindBagStageProps> = ({
                   <div
                     className="absolute inset-2 rounded-[22px] overflow-hidden border border-white/30 shadow-inner bg-slate-900"
                     style={{
-                      backgroundImage: 'url(/art/blindbags-grid.png)',
+                      backgroundImage: `url(${import.meta.env.BASE_URL || './'}art/blindbags-grid.png)`,
                       backgroundSize: '200% 200%',
                       backgroundPosition: `${bagQuadrant.x} ${bagQuadrant.y}`,
                     }}

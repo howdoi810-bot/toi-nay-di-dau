@@ -63,9 +63,10 @@ export function getCardSpriteStyle(cardId: string): React.CSSProperties {
 
   const posX = mapping.col === 0 ? '0%' : mapping.col === 1 ? '50%' : '100%';
   const posY = mapping.row === 0 ? '0%' : mapping.row === 1 ? '50%' : '100%';
+  const baseUrl = import.meta.env.BASE_URL || './';
 
   return {
-    backgroundImage: `url(/art/hangouts-sheet-${mapping.sheet}.png)`,
+    backgroundImage: `url(${baseUrl}art/hangouts-sheet-${mapping.sheet}.png)`,
     backgroundSize: '300% 300%',
     backgroundPosition: `${posX} ${posY}`,
     backgroundRepeat: 'no-repeat',
