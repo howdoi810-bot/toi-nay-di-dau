@@ -242,7 +242,10 @@ export async function recordBagRip(count: number, rarity: string, wishMatched: b
   return latest;
 }
 
-export async function recordCardShare(method: 'download_png' | 'copy_zalo', cardId: string): Promise<void> {
+export async function recordCardShare(
+  method: 'download_png' | 'download_story' | 'copy_zalo' | 'share_threads' | 'share_native',
+  cardId: string
+): Promise<void> {
   sendGaEvent('share_card', { method, card_id: cardId });
   await hitKey('cards_shared');
 }

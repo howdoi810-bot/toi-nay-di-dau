@@ -10,10 +10,15 @@ import {
   X,
   RotateCw,
   Gift,
+  Share2,
 } from 'lucide-react';
 import { CITY_OPTIONS, RARITY_CONFIG, VIBE_WISHES } from '../data/themes';
 import { CityPreset, HangoutCard, UnboxResult } from '../types/hangout';
-import { generateShareCardDataUrl } from '../utils/shareCardGenerator';
+import {
+  generateShareCardDataUrl,
+  generateStoryCardDataUrl,
+  dataUrlToFile,
+} from '../utils/shareCardGenerator';
 import { CardArtwork } from './CardArtwork';
 import { soundEngine } from '../utils/sound';
 import { recordCardShare, recordMapsClick } from '../utils/analytics';
@@ -117,6 +122,57 @@ export const HangoutCardModal: React.FC<HangoutCardModalProps> = ({
       link.click();
       document.body.removeChild(link);
       recordCardShare('download_png', activeCard.id);
+    } finally {
+      setIsGeneratingImg(false);
+    }
+  };
+
+  const handleDownloadStoryCard = async () => {
+    setIsGeneratingImg(true);
+    try {
+      const dataUrl = await generateStoryCardDataUrl(result, city);
+      const link = document.createElement('a');
+      link.download = `the-chot-keo-${activeCard.id}-story-9x16.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      recordCardShare('download_story', activeCard.id);
+    } finally {
+      setIsGeneratingImg(false);
+    }
+  };
+
+  const handleShareToThreads = () => {
+    recordCardShare('share_threads', activeCard.id);
+    const text = `Tối nay khỏi cãi nhau "Đi đâu cũng được" nha! 🎁🌙\n\nVừa xé túi mù trúng ngay kèo: ${activeCard.emoji} ${activeCard.title} (${activeCard.category})\n💰 Dự kiến: ${activeCard.priceEstimate}/người\n⚠️ LUẬT NGẦM: ${result.twistCard.title} — ${result.twistCard.penalty}\n\nVào xé túi mù chốt kèo đi chơi tại: https://howdoi810-bot.github.io/toi-nay-di-dau/?ref=threads\n#toinaydidau #xetuimu #hangout #dating #saigon #hanoi`;
+    const url = `https://threads.net/intent/post?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleNativeShare = async () => {
+    if (typeof navigator === 'undefined' || !navigator.share) return;
+    recordCardShare('share_native', activeCard.id);
+    try {
+      setIsGeneratingImg(true);
+      const dataUrl = await generateStoryCardDataUrl(result, city);
+      const file = dataUrlToFile(dataUrl, `chot-keo-${activeCard.id}-story.png`);
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: 'Tối Nay Đi Đâu? — Xé Túi Mù Chốt Kèo',
+          text: `Kèo tối nay: ${activeCard.title}! Luật ngầm: ${result.twistCard.title}. Cấm bùng kèo!`,
+          files: [file],
+          url: 'https://howdoi810-bot.github.io/toi-nay-di-dau/?ref=native_share',
+        });
+      } else {
+        await navigator.share({
+          title: 'Tối Nay Đi Đâu? — Xé Túi Mù Chốt Kèo',
+          text: `Kèo tối nay: ${activeCard.title}! Luật ngầm: ${result.twistCard.title}. Xé túi mù tại: https://howdoi810-bot.github.io/toi-nay-di-dau/?ref=native_share`,
+          url: 'https://howdoi810-bot.github.io/toi-nay-di-dau/?ref=native_share',
+        });
+      }
+    } catch {
+      // User dismissed
     } finally {
       setIsGeneratingImg(false);
     }
@@ -368,44 +424,84 @@ export const HangoutCardModal: React.FC<HangoutCardModalProps> = ({
         </div>
 
         {/* Bottom Compact Action Pill Bar */}
-        <div className="flex flex-wrap items-center justify-center gap-2.5 mt-4 z-20">
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-4 z-20 max-w-xl">
+          {/* Flip Button */}
           <button
             type="button"
             onClick={handleFlipCard}
-            className="px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition"
+            className="px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition"
           >
-            <RotateCw className="w-4 h-4 text-amber-300" />
-            <span>{isFlipped ? 'Lật Mặt Trước (Ảnh)' : 'Lật Mặt Sau (Luật Ngầm)'}</span>
+            <RotateCw className="w-3.5 h-3.5 text-amber-300" />
+            <span>{isFlipped ? 'Mặt Trước' : 'Mặt Sau (Luật)'}</span>
           </button>
 
+          {/* 1-Click Threads Share */}
+          <button
+            type="button"
+            onClick={handleShareToThreads}
+            className="px-3.5 py-2 rounded-2xl bg-black hover:bg-zinc-900 border border-white/25 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg transition group"
+          >
+            <span className="text-sm">🧵</span>
+            <span className="group-hover:text-pink-300 transition">Đăng Threads</span>
+          </button>
+
+          {/* Mobile Native Share Sheet (if supported) */}
+          {typeof navigator !== 'undefined' && !!navigator.share && (
+            <button
+              type="button"
+              onClick={handleNativeShare}
+              disabled={isGeneratingImg}
+              className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg transition"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Chia Sẻ / Story</span>
+            </button>
+          )}
+
+          {/* Download 1:1 Card */}
           <button
             type="button"
             onClick={handleDownloadShareCard}
             disabled={isGeneratingImg}
-            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg transition"
+            className="px-3 py-2 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition"
+            title="Tải ảnh thẻ vuông (1:1)"
           >
-            <Download className="w-4 h-4" />
-            <span>{isGeneratingImg ? 'Đang xuất...' : 'Tải Ảnh Chốt Kèo'}</span>
+            <Download className="w-3.5 h-3.5 text-pink-400" />
+            <span>{isGeneratingImg ? '...' : 'Ảnh Thẻ'}</span>
           </button>
 
+          {/* Download 9:16 Story */}
+          <button
+            type="button"
+            onClick={handleDownloadStoryCard}
+            disabled={isGeneratingImg}
+            className="px-3 py-2 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition"
+            title="Tải ảnh dọc Story (9:16) cho Instagram, TikTok, Facebook"
+          >
+            <Download className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Story 9:16</span>
+          </button>
+
+          {/* Copy Zalo */}
           <button
             type="button"
             onClick={handleCopyShareMessage}
-            className="px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition"
+            className="px-3 py-2 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition"
           >
             {copiedText ? (
               <>
-                <Check className="w-4 h-4 text-emerald-400" />
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="text-emerald-300">Đã Copy!</span>
               </>
             ) : (
               <>
-                <Copy className="w-4 h-4 text-cyan-300" />
+                <Copy className="w-3.5 h-3.5 text-cyan-300" />
                 <span>Copy Zalo</span>
               </>
             )}
           </button>
 
+          {/* Rip Next Bag */}
           <button
             type="button"
             onClick={() => {
@@ -413,10 +509,10 @@ export const HangoutCardModal: React.FC<HangoutCardModalProps> = ({
               setSelectedSlot('primary');
               onRipAgain();
             }}
-            className="px-5 py-2.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-display text-xs flex items-center gap-1.5 shadow-lg transition"
+            className="px-4 py-2 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-display text-xs flex items-center gap-1.5 shadow-lg transition"
           >
-            <RotateCcw className="w-4 h-4" />
-            <span>XÉ TÚI TIẾP</span>
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>XÉ TIẾP</span>
           </button>
         </div>
       </div>
